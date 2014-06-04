@@ -20,3 +20,4 @@ tmp
 *.o
 *.a
 mkmf.log
+.bq_secret_token.json

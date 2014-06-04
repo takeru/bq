@@ -19,12 +19,17 @@ Or install it yourself as:
 ## Usage
 
     require "bq"
-    
-    bq = Bq::InstalledApp.new
-    token = bq.authorize # please locate client_secrets.json in load path.
-    # save token into file or db or ...
-    
-    bq2 = Bq::InstalledApp.new(:token=>token, :project_id=>"your-project-id")
+
+    # authorize and store access-token to file.
+    bq = Bq::InstalledApp.new(:token_storage=>".bq_secret_token.json")
+    bq.authorize # please locate client_secrets.json in load path.
+
+    ...
+
+    # restore access-token from file.
+    bq2 = Bq::InstalledApp.new(:token_storage=>".bq_secret_token.json", :project_id=>"your-project-id")
+
+    # execute query
     pp bq2.datasets.to_hash
     pp bq2.query("SELECT 12345").to_hash
 

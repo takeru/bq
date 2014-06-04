@@ -2,31 +2,50 @@ require "bq/version"
 require 'google/api_client'
 require 'google/api_client/client_secrets'
 require 'google/api_client/auth/installed_app'
+require 'google/api_client/auth/file_storage'
 require 'json'
 
 module Bq
   class Base
-    attr_reader :token
     attr_accessor :project_id
 
     def initialize(opts={})
       @project_id         = opts[:project_id]
       application_name    = opts[:application_name]    || "Bq"
-      application_version = opts[:application_version] || "0.0.1"
+      application_version = opts[:application_version] || Bq::VERSION
 
       @client = Google::APIClient.new(
         :application_name    => application_name,
         :application_version => application_version
       )
-      self.token = opts[:token] if opts[:token]
-      @bq_client = @client.discovered_api('bigquery', 'v2')
+
+      self.token_storage = opts[:token_storage] if opts[:token_storage]
+      if @token_storage && @token_storage.authorization
+        @client.authorization = @token_storage.authorization
+      elsif opts[:token]
+        @client.authorization = opts[:token]
+      end
+
+      @bq_client            = @client.discovered_api('bigquery', 'v2')
     end
-    def token=(token)
-      @client.authorization.client_id     = token["client_id"]
-      @client.authorization.client_secret = token["client_secret"]
-      @client.authorization.scope         = token["scope"]
-      @client.authorization.refresh_token = token["refresh_token"]
-      @client.authorization.access_token  = token["access_token"]
+
+    def token_storage=(storage)
+      if storage.kind_of?(String)
+        storage = Google::APIClient::FileStorage.new(storage)
+      end
+      if storage.respond_to?(:load_credentials) && storage.respond_to?(:write_credentials)
+        @token_storage = storage
+      else
+        raise "invalid storage"
+      end
+    end
+
+    def token
+      @client.authorization
+    end
+
+    def authorized?
+      !@client.authorization.access_token.nil?
     end
   end
 
@@ -41,25 +60,17 @@ module Bq
         :client_secret => credential.client_secret,
         :scope         => ['https://www.googleapis.com/auth/bigquery']
       )
-      @client.authorization = flow.authorize
+      @client.authorization = flow.authorize(@token_storage)
       # Here, will be opened authorization web page.
       # Click [Authorize] button, and I see "Error: redirect_uri_mismatch".
       # But it may be succeed, authorize arguments is available.
 
       unless @client.authorization
         puts "failed to authorize. Canceled?"
-        return nil
+        return false
       end
 
-      @token = {
-        "scope"         => @client.authorization.scope,
-        "client_id"     => @client.authorization.client_id,
-        "client_secret" => @client.authorization.client_secret,
-        "access_token"  => @client.authorization.access_token,
-        "refresh_token" => @client.authorization.refresh_token
-      }.freeze
-
-      return @token
+      return true
     end
 
     def datasets
@@ -97,20 +108,16 @@ if __FILE__ == $0
       "datasets",             # list datasets
       "query:"                # execute query
     )
+    bq = Bq::InstalledApp.new(:token_storage=>token_file)
     if opts["authorize"]
       puts "will be open authorization page in web browser..."
-      bq = Bq::InstalledApp.new
       bq.authorize(opts["client_secrets_json"])
-      open(token_file,'w') do |f|
-        JSON.dump(bq.token,f)
-      end
-      puts "wrote access token to file: .bq_secret_token.json"
+      puts "wrote access token to file: #{token_file}"
     end
 
     project_id = opts["project_id"]
     raise "project_id missing." unless project_id
-    token = JSON.parse File.read(token_file)
-    bq = Bq::InstalledApp.new(:token=>token, :project_id=>project_id)
+    bq.project_id = project_id
 
     if opts["datasets"]
       pp bq.datasets.to_hash
