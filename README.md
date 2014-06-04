@@ -33,6 +33,10 @@ Or install it yourself as:
     pp bq2.datasets.to_hash
     pp bq2.query("SELECT 12345").to_hash
 
+## Example
+
+    bq_project_id=your-project-id bundle exec ruby examples/bq_example.rb
+
 ## Contributing
 
 1. Fork it ( https://github.com/takeru/bq/fork )
