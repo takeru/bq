@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["sasaki.takeru@gmail.com"]
   spec.summary       = %q{Just execute (Big)query.}
   spec.description   = %q{}
-  spec.homepage      = ""
+  spec.homepage      = "https://github.com/takeru/bq"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0")
