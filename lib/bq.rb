@@ -3,7 +3,6 @@ require 'google/api_client'
 require 'google/api_client/client_secrets'
 require 'google/api_client/auth/installed_app'
 require 'google/api_client/auth/file_storage'
-require 'json'
 
 module Bq
   class Base
@@ -26,7 +25,7 @@ module Bq
         @client.authorization = opts[:token]
       end
 
-      @bq_client            = @client.discovered_api('bigquery', 'v2')
+      @bq_client = @client.discovered_api('bigquery', 'v2')
     end
 
     def token_storage=(storage)
@@ -52,7 +51,6 @@ module Bq
   class InstalledApp < Base
     def authorize(client_secrets_json=nil)
       client_secrets_json ||= "client_secrets.json"
-      puts "read from #{client_secrets_json}"
       credential = Google::APIClient::ClientSecrets.load(client_secrets_json)
 
       flow = Google::APIClient::InstalledAppFlow.new(
@@ -61,12 +59,8 @@ module Bq
         :scope         => ['https://www.googleapis.com/auth/bigquery']
       )
       @client.authorization = flow.authorize(@token_storage)
-      # Here, will be opened authorization web page.
-      # Click [Authorize] button, and I see "Error: redirect_uri_mismatch".
-      # But it may be succeed, authorize arguments is available.
 
       unless @client.authorization
-        puts "failed to authorize. Canceled?"
         return false
       end
 
@@ -81,12 +75,12 @@ module Bq
       return result.data
     end
 
-    def query(q,timeout=90)
+    def query(q,timeout=60)
       result = @client.execute(
         :api_method  => @bq_client.jobs.query,
         :body_object => {
           "query"     => q,
-          "timeoutMs" => timeout * 1000
+          "timeoutMs" => (timeout * 1000).to_i
         },
         :parameters => {'projectId' => @project_id}
       )

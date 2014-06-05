@@ -36,6 +36,7 @@ Or install it yourself as:
 ## Example
 
     bq_project_id=your-project-id bundle exec ruby examples/bq_example.rb
+    bundle exec ruby -rpp -e "require 'bq'; pp Bq::InstalledApp.new(:project_id=>'your-project-id',:token_storage=>'.bq_secret_token.json').query('SELECT weight_pounds, state, year, gestation_weeks FROM publicdata:samples.natality ORDER BY weight_pounds DESC LIMIT 20;').to_hash"
 
 ## Contributing
 
